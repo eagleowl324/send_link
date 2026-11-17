@@ -220,6 +220,8 @@ function createHandler({ kv, blob, config, now = () => Date.now() }) {
       publicUrl: config.publicUrl || null,
       lanUrls: [],
       build: config.build || null,
+      // 만료된 수업방의 파일을 지우는 매일 정리 작업이 켜져 있는지 (CRON_SECRET 을 등록해야 켜집니다)
+      cleanup: Boolean(config.cronSecret),
     };
   }
 

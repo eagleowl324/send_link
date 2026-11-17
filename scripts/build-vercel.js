@@ -38,6 +38,11 @@ function build(env = process.env) {
   const siteName = escapeHtml(loadConfig(env).siteName);
   fs.rmSync(OUTPUT, { recursive: true, force: true });
   copy(SOURCE, OUTPUT, siteName);
+  // 지금 떠 있는 것이 언제 만든 배포인지 밖에서 확인할 수 있게 적어 둡니다. (https://<주소>/version.json)
+  // 환경 변수를 바꾼 뒤 "다시 배포"가 실제로 됐는지 볼 때 씁니다.
+  const sha = String(env.VERCEL_GIT_COMMIT_SHA || '');
+  const version = { commit: /^[0-9a-f]{7,40}$/.test(sha) ? sha.slice(0, 7) : null, builtAt: new Date().toISOString() };
+  fs.writeFileSync(path.join(OUTPUT, 'version.json'), JSON.stringify(version) + '\n');
   return OUTPUT;
 }
 

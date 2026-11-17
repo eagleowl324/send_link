@@ -93,6 +93,11 @@ Deployments에서 맨 위 배포의 ⋯ → **Redeploy** 를 누르거나, 저�
 3. 파일 올리기 → 휴대폰에서 다운로드 → 선생님 화면에서 삭제.
 4. 하루 뒤 Vercel의 Cron Jobs / Logs에서 `/api/cron/cleanup`이 성공(200)으로 기록됐는지.
 
+설정이 실제로 적용됐는지는 주소 두 개로 바로 볼 수 있습니다.
+
+- `https://<주소>/version.json` — 지금 떠 있는 배포를 만든 시각(`builtAt`, UTC)과 커밋. 환경 변수를 바꾼 뒤 다시 배포했는데 이 시각이 그대로라면 새 배포가 만들어지지 않은 것입니다.
+- `https://<주소>/api/config` — `requirePassword`(비밀번호 `TEACHER_PASSWORD` 적용 여부), `cleanup`(정리 작업용 `CRON_SECRET` 적용 여부)
+
 문제가 생기면 Vercel의 **Logs**에 찍힌 오류 문구가 원인을 찾는 데 가장 도움이 됩니다.
 
 ### Vercel에서 달라지는 점

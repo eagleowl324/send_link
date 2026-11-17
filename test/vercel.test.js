@@ -67,11 +67,31 @@ test('Vercel: 설정', async (t) => {
   assert.equal(res.data.transport, 'poll');
   assert.equal(res.data.upload, 'blob');
   assert.equal(res.data.requirePassword, true);
+  assert.equal(res.data.cleanup, true);
   assert.equal(res.data.pollMs, 3000);
   assert.deepEqual(res.data.lanUrls, []);
   assert.match(res.headers.get('cdn-cache-control'), /s-maxage=60/);
   assert.equal((await call(base, 'POST', '/api/config')).status, 405);
   assert.equal((await call(base, 'GET', '/api/nope')).status, 404);
+
+  // 비밀번호와 정리 작업용 값을 등록하지 않은 배포는 설정에서 바로 드러난다
+  const open = await boot(t, { teacherPassword: '', cronSecret: '' });
+  const bare = (await call(open.base, 'GET', '/api/config')).data;
+  assert.equal(bare.requirePassword, false);
+  assert.equal(bare.cleanup, false);
+});
+
+test('Vercel: 빌드는 화면과 함께 배포 시각(version.json)을 만든다', () => {
+  const fs = require('node:fs');
+  const path = require('node:path');
+  const { build } = require('../scripts/build-vercel');
+  const before = Date.now();
+  const out = build({ SITE_NAME: '우리 <반>', VERCEL_GIT_COMMIT_SHA: 'abc1234' + '0'.repeat(33) });
+  const version = JSON.parse(fs.readFileSync(path.join(out, 'version.json'), 'utf8'));
+  assert.equal(version.commit, 'abc1234');
+  assert.ok(Date.parse(version.builtAt) >= before - 1000 && Date.parse(version.builtAt) <= Date.now() + 1000);
+  assert.match(fs.readFileSync(path.join(out, 'index.html'), 'utf8'), /우리 &#60;반&#62;/);
+  assert.equal(JSON.parse(fs.readFileSync(path.join(build({}), 'version.json'), 'utf8')).commit, null);
 });
 
 test('Vercel: 수업방 만들기 → 공유 → 수정 → 삭제', async (t) => {
