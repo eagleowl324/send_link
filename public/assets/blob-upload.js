@@ -22,7 +22,11 @@
         return A.errorText(err);
       }
       if (err && err.code === 'timeout') return A.errorText(err);
-      if (err && err.storageStatus) return '파일 저장소가 받지 않았습니다. (오류 ' + err.storageStatus + ') 잠시 뒤 다시 시도해 주세요.';
+      if (err && err.storageStatus) {
+        return (
+          '파일 저장소가 받지 않았습니다. (오류 ' + err.storageStatus + (err.storageReason ? ': ' + err.storageReason : '') + ') 잠시 뒤 다시 시도해 주세요.'
+        );
+      }
       return '파일 저장소에 올리지 못했습니다. 네트워크를 확인한 뒤 다시 시도해 주세요.';
     }
 
@@ -43,6 +47,14 @@
           } else {
             var err = new Error('storage');
             err.storageStatus = xhr.status;
+            // 저장소가 알려 준 이유가 있으면 함께 보여 줍니다. (문제를 찾을 때 필요합니다)
+            try {
+              var reason = JSON.parse(xhr.responseText).error;
+              var text = reason && (reason.message || reason.code);
+              if (typeof text === 'string') err.storageReason = text.slice(0, 120);
+            } catch (ignore) {
+              // 이유를 읽을 수 없으면 상태 번호만 보여 줍니다
+            }
             reject(err);
           }
         };

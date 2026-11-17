@@ -148,7 +148,13 @@
       // 설정을 못 읽어도 기본 화면은 그대로 쓸 수 있습니다. 다만 서버 준비가 덜 된 경우에는 알려 줍니다.
       if (err && err.code === 'not_configured') {
         $('footnote').className = 'footnote form-error';
-        $('footnote').textContent = A.errorText(err);
+        // 서버가 무엇이 빠졌는지 알려 주면 함께 보여 줍니다. (설정하는 사람이 바로 알 수 있게)
+        var parts = [A.errorText(err)];
+        ['message', 'hint'].forEach(function (field) {
+          var value = err.data && err.data[field];
+          if (typeof value === 'string' && value) parts.push(value.slice(0, 300));
+        });
+        $('footnote').textContent = parts.join(' — ');
       }
     }
   );

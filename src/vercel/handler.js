@@ -81,6 +81,12 @@ function createHandler({ kv, blob, config, now = () => Date.now() }) {
     } else if (err && err.storeCode && STORE_STATUS[err.storeCode]) {
       status = STORE_STATUS[err.storeCode];
       code = err.storeCode;
+    } else if (err && err.storageCode) {
+      // 파일 저장소(Blob) 쪽 문제. 파일을 다루는 요청은 선생님만 보낼 수 있으므로, 원인을 함께 알려 줍니다.
+      status = err.storageCode === 'storage_error' ? 502 : 503;
+      code = err.storageCode;
+      extra = { detail: String(err.message || '').slice(0, 300) };
+      console.error(`[storage] ${req.method} ${req.url}: ${code}: ${err.message}`);
     } else {
       console.error(`[error] ${req.method} ${req.url}:`, err);
     }
@@ -213,6 +219,7 @@ function createHandler({ kv, blob, config, now = () => Date.now() }) {
       roomTtlMs: config.roomTtlMs,
       publicUrl: config.publicUrl || null,
       lanUrls: [],
+      build: config.build || null,
     };
   }
 

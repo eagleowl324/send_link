@@ -415,29 +415,6 @@ test('Vercel: 오래 쓰지 않은 수업방은 사라지고, 매일 도는 정�
   assert.equal(kept.status, 201);
 });
 
-test('Vercel: 저장소가 연결되지 않았으면 알아볼 수 있는 오류로 답한다', async () => {
-  const saved = {};
-  for (const name of ['KV_REST_API_URL', 'KV_REST_API_TOKEN', 'UPSTASH_REDIS_REST_URL', 'UPSTASH_REDIS_REST_TOKEN', 'BLOB_READ_WRITE_TOKEN']) {
-    saved[name] = process.env[name];
-    delete process.env[name];
-  }
-  delete require.cache[require.resolve('../api/index.js')];
-  const fn = require('../api/index.js');
-  const out = await new Promise((resolve) => {
-    const res = {
-      setHeader() {},
-      end(data) {
-        resolve({ status: this.statusCode, data: JSON.parse(data) });
-      },
-    };
-    fn({ method: 'GET', url: '/api/config', headers: {} }, res);
-  });
-  for (const name of Object.keys(saved)) if (saved[name] !== undefined) process.env[name] = saved[name];
-  assert.equal(out.status, 503);
-  assert.equal(out.data.error, 'not_configured');
-  assert.match(out.data.message, /Redis/);
-});
-
 // ---------------------------------------------------------------- 실제 SDK와의 연결 (패키지가 설치돼 있을 때만)
 
 let sdkInstalled = true;
@@ -453,7 +430,8 @@ test('Vercel: 실제 SDK로 만든 업로드 허가증', { skip: !sdkInstalled &
   const { createBlobStore, BLOB_API_URL, BLOB_API_VERSION } = require('../src/vercel/blob');
   const { getPayloadFromClientToken } = require('@vercel/blob/client');
 
-  const store = createBlobStore({ token: 'vercel_blob_rw_TestStore123_' + 'x'.repeat(30) });
+  // (저장소 종류를 미리 정해 두면 저장소에 물어보지 않으므로, 네트워크 없이 확인할 수 있다)
+  const store = createBlobStore({ token: 'vercel_blob_rw_TestStore123_' + 'x'.repeat(30), access: 'public' });
   const pathname = 'rooms/123456-abc/' + 'f'.repeat(32) + '/한글 파일 (1).pdf';
   const validUntil = Date.now() + 60 * 60 * 1000;
   const ticket = await store.uploadTicket({ pathname, size: 12345, validUntil });
@@ -487,7 +465,12 @@ test('Vercel: 실제 SDK로 만든 업로드 허가증', { skip: !sdkInstalled &
 
 test('Vercel: 함수 진입점이 SDK와 함께 올라온다', { skip: !sdkInstalled && '@vercel/blob 미설치' }, async () => {
   const saved = {};
-  const env = { KV_REST_API_URL: 'https://example.invalid', KV_REST_API_TOKEN: 't', BLOB_READ_WRITE_TOKEN: 'vercel_blob_rw_Store_' + 'y'.repeat(20) };
+  const env = {
+    KV_REST_API_URL: 'https://example.invalid',
+    KV_REST_API_TOKEN: 't',
+    BLOB_READ_WRITE_TOKEN: 'vercel_blob_rw_Store_' + 'y'.repeat(20),
+    BLOB_STORE_ID: '',
+  };
   for (const name of Object.keys(env)) {
     saved[name] = process.env[name];
     process.env[name] = env[name];

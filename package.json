@@ -6,7 +6,7 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "test": "node --test test/api.test.js test/vercel.test.js",
+    "test": "node --test test/api.test.js test/vercel.test.js test/blob.test.js",
     "build:vercel": "node scripts/build-vercel.js",
     "dev:vercel": "node scripts/dev-vercel.js"
   },

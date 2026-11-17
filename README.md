@@ -63,10 +63,12 @@ Vercel은 요청이 올 때만 잠깐 실행되는 방식이라, 수업방 내�
 
 빌드 방법과 주소 규칙은 `vercel.json`에 들어 있어 따로 설정할 것이 없습니다.
 
-**2. Redis 연결** — 프로젝트의 **Storage** 탭에서 Redis(마켓플레이스의 Upstash)를 만들어 이 프로젝트에 연결합니다.
+**2. Redis 연결** — 프로젝트의 **Storage** 탭에서 Redis(마켓플레이스의 **Upstash**)를 만들어 이 프로젝트에 연결합니다.
 연결하면 접속 정보가 환경 변수로 자동 등록됩니다 (`KV_REST_API_URL`·`KV_REST_API_TOKEN` 또는 `UPSTASH_REDIS_REST_URL`·`UPSTASH_REDIS_REST_TOKEN` — 어느 쪽이든 인식합니다).
 
-**3. Blob 저장소 연결** — 같은 **Storage** 탭에서 Blob 저장소를 **공개(Public)** 로 만들어 연결합니다. `BLOB_READ_WRITE_TOKEN`이 자동 등록됩니다.
+**3. Blob 저장소 연결** — 같은 **Storage** 탭에서 Blob 저장소를 **공개(Public)** 로 만들어 연결합니다.
+연결하면 `BLOB_STORE_ID`가 자동 등록됩니다 (예전에 만든 저장소는 `BLOB_READ_WRITE_TOKEN` — 어느 쪽이든 인식합니다).
+`BLOB_STORE_ID` 방식은 비밀 값 없이, Vercel이 함수에 건네주는 신원 토큰(OIDC)으로 저장소에 접속합니다.
 
 **4. 환경 변수 추가** — **Settings → Environment Variables**
 
@@ -76,13 +78,15 @@ Vercel은 요청이 올 때만 잠깐 실행되는 방식이라, 수업방 내�
 | `CRON_SECRET` | 아무도 모르는 긴 문자열. 매일 한 번 도는 파일 정리 작업을 Vercel만 실행할 수 있게 합니다. 없으면 정리 작업이 돌지 않습니다. |
 | `SITE_NAME` | (선택) 화면에 표시할 이름. 기본값 `수업공유` |
 
-**5. 다시 배포** — 저장소 연결과 환경 변수는 다음 배포부터 적용됩니다. Deployments에서 Redeploy 하거나 `npx vercel --prod`를 다시 실행하세요.
+**5. 다시 배포** — 저장소 연결과 환경 변수는 **그 뒤에 새로 만든 배포부터** 적용됩니다. 이미 떠 있는 배포에는 반영되지 않습니다.
+Deployments에서 맨 위 배포의 ⋯ → **Redeploy** 를 누르거나, 저장소에 새 커밋을 올리거나, `npx vercel --prod`를 다시 실행하세요.
 
 이제 `https://<프로젝트 이름>.vercel.app` 으로 접속해 수업방을 만들면 됩니다.
 
 ### 배포 후 확인할 것
 
-1. 첫 화면에서 수업방이 만들어지는지. "서버 설정이 아직 끝나지 않았습니다"가 보이면 2·3번 연결 뒤 다시 배포했는지 확인하세요.
+1. 첫 화면에서 수업방이 만들어지는지. "서버 설정이 아직 끝나지 않았습니다"가 보이면 그 옆에 빠진 저장소가 함께 표시됩니다.
+   2·3번 연결 뒤에 **다시 배포했는지** 확인하세요. (`https://<주소>/api/config` 를 열면 그 배포가 받은 저장소 관련 환경 변수의 이름이 `seen`에 나옵니다)
 2. 다른 기기(휴대폰)로 접속한 뒤 글을 공유했을 때 5초 안에 보이는지.
 3. 파일 올리기 → 휴대폰에서 다운로드 → 선생님 화면에서 삭제.
 4. 하루 뒤 Vercel의 Cron Jobs / Logs에서 `/api/cron/cleanup`이 성공(200)으로 기록됐는지.
@@ -197,7 +201,7 @@ Vercel에서만 쓰는 것:
 | `POLL_SECONDS` | `3` | 학생 화면이 바뀐 내용을 확인하는 간격(초). 늘리면 요청 수가 줄고 반영이 늦어집니다. |
 | `POLL_CACHE_SECONDS` | `2` | 위 확인의 답을 CDN이 보관하는 시간(초) |
 | `PRESENCE_SECONDS` | `120` | 접속자 수 집계를 위해 학생 화면이 신호를 보내는 간격(초) |
-| `KV_REST_API_URL`, `KV_REST_API_TOKEN`, `BLOB_READ_WRITE_TOKEN` | — | 저장소를 연결하면 자동으로 들어옵니다 |
+| `KV_REST_API_URL`, `KV_REST_API_TOKEN`, `BLOB_STORE_ID`(또는 `BLOB_READ_WRITE_TOKEN`) | — | 저장소를 연결하면 자동으로 들어옵니다 |
 
 직접 서버로 실행할 때만 쓰는 것:
 
@@ -231,8 +235,10 @@ Vercel에서만 쓰는 것:
 
 | 증상 | 확인할 것 |
 | --- | --- |
-| (Vercel) "서버 설정이 아직 끝나지 않았습니다" | Redis와 Blob 저장소를 프로젝트에 연결했는지, 연결 뒤 다시 배포했는지 |
-| (Vercel) 파일을 올리면 "파일 저장소가 받지 않았습니다" | Blob 저장소를 **공개(Public)** 로 만들었는지, 저장소 용량 한도를 넘지 않았는지 |
+| (Vercel) "서버 설정이 아직 끝나지 않았습니다" | Redis와 Blob 저장소를 프로젝트에 연결했는지, **연결한 뒤에 다시 배포했는지** (연결 전에 만든 배포에는 반영되지 않습니다) |
+| (Vercel) 파일을 올리면 "파일 저장소에 접속하지 못했습니다" | Blob 저장소가 이 프로젝트(Production 환경)에 연결돼 있는지, 프로젝트 설정의 OIDC(Secure Backend Access)가 켜져 있는지 |
+| (Vercel) 파일을 올리면 "비공개(Private)용이라 올릴 수 없습니다" | Blob 저장소를 **공개(Public)** 로 새로 만들어 연결하고 다시 배포 |
+| (Vercel) 파일을 올리면 "파일 저장소가 받지 않았습니다" | 괄호 안에 저장소가 알려 준 이유가 표시됩니다. 저장소 용량 한도를 넘지 않았는지 확인하세요. |
 | (Vercel) 파일만 안 올라가거나 안 받아진다 | 그 네트워크에서 `vercel.com`, `*.public.blob.vercel-storage.com` 접속이 되는지 |
 | (Vercel) 공유한 내용이 늦게 보인다 | 정상 범위는 2~5초입니다. 더 늦다면 `POLL_SECONDS`, `POLL_CACHE_SECONDS` 값을 확인하세요. |
 | (직접 서버) 학생 기기에서 주소가 열리지 않는다 | 같은 Wi-Fi인지, Windows 방화벽에서 Node.js를 허용했는지, 무선망의 단말 간 격리 여부 |
@@ -247,7 +253,7 @@ Vercel에서만 쓰는 것:
 npm test
 ```
 
-Node.js 내장 테스트 도구를 씁니다. Vercel용 테스트 가운데 SDK와 맞물리는 두 개는 `npm install`을 한 뒤에만 실행되고, 아니면 건너뜁니다.
+Node.js 내장 테스트 도구를 씁니다. Vercel용 테스트 가운데 SDK(@vercel/blob)와 맞물리는 것들은 `npm install`을 한 뒤에만 실행되고, 아니면 건너뜁니다.
 
 ```
 server.js                직접 서버 실행의 시작 지점
@@ -262,12 +268,13 @@ src/vercel/handler.js    (Vercel) API 처리
 src/vercel/rooms.js      (Vercel) 수업방·항목·접속자를 Redis에 저장
 src/vercel/kv.js         (Vercel) Redis REST 호출
 src/vercel/blob.js       (Vercel) 파일 저장소 연결 (@vercel/blob)
+src/vercel/oidc.js       (Vercel) 저장소 접속에 쓰는 신원 토큰(OIDC) 꺼내기
 vercel.json              (Vercel) 주소 규칙, 보안 머리글, 매일 도는 정리 작업
 scripts/build-vercel.js  (Vercel) 정적 화면 빌드 → dist/
 scripts/dev-vercel.js    Vercel용 구성을 내 컴퓨터에서 미리 보기
 
 public/                  화면 (HTML · CSS · JavaScript). 두 방식이 같은 화면을 씁니다.
-test/                    테스트와, 테스트용으로 흉내 낸 Redis·Blob
+test/                    테스트와, 테스트용으로 흉내 낸 Redis·Blob (fake-blob-api.js 는 Blob의 관리 API를 흉내 냅니다)
 ```
 
 ## 오픈소스 고지
