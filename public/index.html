@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="color-scheme" content="light dark">
+<meta name="format-detection" content="telephone=no">
+<title>{{SITE_NAME}}</title>
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/assets/app.css">
+</head>
+<body class="page-home">
+<main class="home">
+  <header class="home__head">
+    <h1 class="brand brand--lg">
+      <span class="brand__mark" aria-hidden="true"></span>
+      <span class="brand__name">{{SITE_NAME}}</span>
+    </h1>
+    <p class="home__lead">수업 중에 링크·텍스트·파일을 학생들에게 바로 전달하세요.</p>
+  </header>
+
+  <section class="card" aria-labelledby="join-title">
+    <h2 id="join-title"><small>학생</small>수업방 들어가기</h2>
+    <form id="join-form" novalidate>
+      <label class="label" for="join-code">선생님이 알려 준 숫자 6자리</label>
+      <div class="code-row">
+        <input class="input code-input" id="join-code" name="code" inputmode="numeric" autocomplete="off"
+               maxlength="7" placeholder="000 000" aria-describedby="join-error">
+        <button class="btn btn--primary" type="submit">들어가기</button>
+      </div>
+      <p class="form-error" id="join-error" role="alert" hidden></p>
+    </form>
+  </section>
+
+  <section class="card" aria-labelledby="create-title">
+    <h2 id="create-title"><small>선생님</small>수업방 만들기</h2>
+    <form id="create-form" novalidate>
+      <div class="field">
+        <label for="room-name">수업방 이름 <span class="optional">(선택)</span></label>
+        <input class="input" id="room-name" name="name" maxlength="40" autocomplete="off" placeholder="예: 3학년 2반 정보">
+      </div>
+      <div class="field" id="password-field" hidden>
+        <label for="room-password">수업방 생성 비밀번호</label>
+        <input class="input" id="room-password" name="password" type="password" autocomplete="current-password">
+      </div>
+      <button class="btn btn--primary btn--block" id="create-button" type="submit">새 수업방 만들기</button>
+      <p class="form-error" id="create-error" role="alert" hidden></p>
+    </form>
+
+    <div class="my-rooms" id="my-rooms" hidden>
+      <h3>내 수업방 <span class="optional">(이 기기에 저장됨)</span></h3>
+      <ul class="room-list" id="my-room-list"></ul>
+    </div>
+  </section>
+
+  <p class="footnote" id="footnote">수업방을 만들면 학생용 주소와 QR 코드가 생깁니다.</p>
+</main>
+
+<div class="toasts" id="toasts" role="status" aria-live="polite"></div>
+
+<script src="/assets/common.js" defer></script>
+<script src="/assets/home.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+# 수업방 데이터와 올린 파일
+data/
+
+# Vercel용 빌드 결과
+dist/
+.vercel/
+
+node_modules/
+*.log
+.DS_Store

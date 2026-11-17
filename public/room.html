@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="color-scheme" content="light dark">
+<meta name="format-detection" content="telephone=no">
+<title>{{SITE_NAME}}</title>
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/assets/app.css">
+</head>
+<body class="page-room" data-state="loading" data-site="{{SITE_NAME}}">
+
+<header class="topbar">
+  <a class="brand" href="/" aria-label="{{SITE_NAME}} 처음 화면">
+    <span class="brand__mark" aria-hidden="true"></span>
+    <span class="brand__name">{{SITE_NAME}}</span>
+  </a>
+  <h1 class="topbar__title" id="room-name">수업방</h1>
+  <div class="topbar__meta">
+    <span class="viewers" id="viewers" hidden>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 20a8 8 0 0 1 16 0"/></svg>
+      <span id="viewers-text"></span>
+    </span>
+    <span class="status" id="status" data-state="connecting">
+      <span class="status__dot" aria-hidden="true"></span>
+      <span id="status-text">연결 중…</span>
+    </span>
+  </div>
+</header>
+
+<main>
+<div class="loading" id="loading" role="status">불러오는 중…</div>
+
+<section class="screen" id="screen" hidden>
+  <h2 id="screen-title"></h2>
+  <p id="screen-text"></p>
+  <a class="btn btn--primary" id="screen-action" href="/">처음 화면으로</a>
+</section>
+
+<div class="layout" id="layout">
+
+  <!-- 선생님에게만 보이는 영역 -->
+  <div class="side" id="host-panel" hidden>
+    <section class="card join" aria-labelledby="join-title">
+      <h2 class="card__title" id="join-title">학생 접속 방법</h2>
+      <div class="join__row">
+        <button class="qr" id="join-qr" type="button" aria-label="접속 안내 크게 보기" title="크게 보기"></button>
+        <div class="join__info">
+          <p class="join__label">QR 코드를 찍거나 주소창에 입력</p>
+          <p class="join__url" id="join-url"></p>
+          <div class="join__actions">
+            <button class="btn btn--sm" id="join-copy" type="button">주소 복사</button>
+            <button class="btn btn--sm" id="join-open" type="button">크게 보기</button>
+          </div>
+        </div>
+      </div>
+      <div class="join__lan" id="lan-row" hidden>
+        <label class="label" for="lan-select">학생에게 보여 줄 주소 (이 컴퓨터의 네트워크)</label>
+        <select class="select" id="lan-select"></select>
+      </div>
+      <p class="note" id="join-note" hidden></p>
+    </section>
+
+    <section class="card composer" id="composer" aria-labelledby="composer-title">
+      <h2 class="card__title" id="composer-title">공유하기</h2>
+      <form id="composer-form" novalidate>
+        <textarea id="composer-text" rows="3" placeholder="링크나 텍스트를 붙여넣으세요" aria-label="공유할 링크 또는 텍스트"></textarea>
+        <ul class="staged" id="staged" hidden></ul>
+        <div class="composer__row">
+          <button class="btn" id="pick-files" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+            파일 추가
+          </button>
+          <label class="check"><input type="checkbox" id="composer-mono"> 코드로 표시</label>
+          <button class="btn btn--primary" id="share-button" type="submit">공유</button>
+        </div>
+        <p class="hint" id="composer-hint"></p>
+        <input class="sr-only" type="file" id="file-input" multiple tabindex="-1" aria-hidden="true">
+      </form>
+    </section>
+
+    <div class="manage">
+      <button class="btn btn--ghost btn--sm" id="rename-room" type="button">이름 바꾸기</button>
+      <button class="btn btn--ghost btn--sm" id="copy-host-link" type="button">선생님용 링크 복사</button>
+      <button class="btn btn--ghost btn--sm btn--danger" id="delete-room" type="button">수업방 삭제</button>
+    </div>
+  </div>
+
+  <section class="main" aria-labelledby="feed-title">
+    <div class="feed-head">
+      <h2 id="feed-title">공유된 내용 <span class="count" id="item-count"></span></h2>
+      <button class="btn btn--ghost btn--sm btn--danger" id="clear-all" type="button" hidden>모두 지우기</button>
+    </div>
+    <ul class="feed" id="feed"></ul>
+    <div class="empty" id="empty" hidden>
+      <strong id="empty-title"></strong>
+      <span id="empty-text"></span>
+    </div>
+  </section>
+</div>
+</main>
+
+<button class="new-pill" id="new-pill" type="button" hidden>새로 공유된 내용 보기 ↑</button>
+
+<div class="dropzone" id="dropzone" hidden>
+  <div class="dropzone__box">여기에 놓으면 보낼 목록에 추가됩니다</div>
+</div>
+
+<dialog class="join-dialog" id="join-dialog" aria-labelledby="jd-title">
+  <div class="jd">
+    <div class="jd__qr" id="jd-qr"></div>
+    <div class="jd__text">
+      <h2 class="jd__title" id="jd-title"></h2>
+      <p class="jd__step">QR 코드를 찍거나, 주소창에 아래 주소를 입력하세요</p>
+      <p class="jd__url" id="jd-url"></p>
+    </div>
+  </div>
+  <div class="jd__buttons">
+    <button class="btn" id="jd-print" type="button">인쇄</button>
+    <button class="btn" id="jd-close" type="button">닫기 (Esc)</button>
+  </div>
+</dialog>
+
+<div class="toasts" id="toasts" role="status" aria-live="polite"></div>
+<div class="sr-only" id="live" aria-live="polite"></div>
+
+<script src="/assets/common.js" defer></script>
+<script src="/assets/room.js" defer></script>
+</body>
+</html>
