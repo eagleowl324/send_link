@@ -29,6 +29,8 @@ const PASSWORD_WINDOW_SEC = 10 * 60;
 
 const PRESENCE_MAX_SEC = 300;
 const UPLOAD_TICKET_SEC = 2 * 60 * 60;
+// 정리 작업용 비밀 값(CRON_SECRET)을 등록하지 않은 배포에서, 정리 작업을 실제로 돌리는 최소 간격
+const OPEN_CLEANUP_INTERVAL_SEC = 12 * 60 * 60;
 // 브라우저에서 바로 열어도 되는 텍스트 형식에서 제외할 것 (파일 저장소 주소에서 웹 페이지로 실행될 수 있는 형식)
 const NO_INLINE_EXT = new Set(['html', 'htm', 'xml']);
 
@@ -220,8 +222,8 @@ function createHandler({ kv, blob, config, now = () => Date.now() }) {
       publicUrl: config.publicUrl || null,
       lanUrls: [],
       build: config.build || null,
-      // 만료된 수업방의 파일을 지우는 매일 정리 작업이 켜져 있는지 (CRON_SECRET 을 등록해야 켜집니다)
-      cleanup: Boolean(config.cronSecret),
+      // 만료된 수업방의 파일을 지우는 매일 정리 작업 (Vercel에서는 항상 켜져 있습니다)
+      cleanup: true,
     };
   }
 
@@ -472,8 +474,16 @@ function createHandler({ kv, blob, config, now = () => Date.now() }) {
   // ------------------------------------------------------------ 정리 (하루 한 번, Vercel Cron)
 
   // 수업방이 만료되면 Redis의 기록은 저절로 사라지지만 파일은 남습니다. 주인 없는 파일을 찾아 지웁니다.
+  // CRON_SECRET 을 등록했으면 그 값을 가진 요청(Vercel의 예약 실행)만 받습니다.
+  // 등록하지 않았으면 누구나 이 주소를 부를 수 있으므로 12시간에 한 번만 실제로 실행합니다.
+  // (지우는 것은 사라진 수업방의 파일과, 올리다 만 채 두 시간 넘게 남은 파일뿐이라 누가 불러도 해가 없습니다)
   async function cleanup(req, res) {
-    if (!config.cronSecret || !util.safeEqual(bearer(req), config.cronSecret)) throw new HttpError(401, 'unauthorized');
+    const trusted = Boolean(config.cronSecret) && util.safeEqual(bearer(req), config.cronSecret);
+    if (config.cronSecret && !trusted) throw new HttpError(401, 'unauthorized');
+    if (!trusted) {
+      const first = await kv.cmd('SET', 'cron:cleanup', String(now()), 'NX', 'EX', OPEN_CLEANUP_INTERVAL_SEC);
+      if (first !== 'OK') return sendJson(res, 200, { ok: true, skipped: true });
+    }
     const startedAt = now();
     const budgetMs = 20 * 1000;
     let folders = 0;
@@ -515,7 +525,8 @@ function createHandler({ kv, blob, config, now = () => Date.now() }) {
       cursor = page.hasMore && now() - startedAt <= budgetMs ? page.cursor : undefined;
     } while (cursor);
 
-    sendJson(res, 200, { ok: true, folders, removedFolders, removedFiles });
+    // 얼마나 지웠는지는 비밀 값을 가진 요청에만 알려 줍니다.
+    sendJson(res, 200, trusted ? { ok: true, folders, removedFolders, removedFiles } : { ok: true });
   }
 
   return async function handler(req, res) {

@@ -74,11 +74,11 @@ test('Vercel: 설정', async (t) => {
   assert.equal((await call(base, 'POST', '/api/config')).status, 405);
   assert.equal((await call(base, 'GET', '/api/nope')).status, 404);
 
-  // 비밀번호와 정리 작업용 값을 등록하지 않은 배포는 설정에서 바로 드러난다
-  const open = await boot(t, { teacherPassword: '', cronSecret: '' });
+  // 비밀번호를 등록하지 않은 배포는 설정에서 바로 드러난다
+  const open = await boot(t, { teacherPassword: '' });
   const bare = (await call(open.base, 'GET', '/api/config')).data;
   assert.equal(bare.requirePassword, false);
-  assert.equal(bare.cleanup, false);
+  assert.equal(bare.cleanup, true);
 });
 
 test('Vercel: 빌드는 화면과 함께 배포 시각(version.json)을 만든다', () => {
@@ -433,6 +433,41 @@ test('Vercel: 오래 쓰지 않은 수업방은 사라지고, 매일 도는 정�
   assert.ok(blob.pathnames()[0].endsWith('/keep.pdf'));
   assert.equal((await call(base, 'GET', `/api/rooms/${live.code}`)).data.items.length, 1);
   assert.equal(kept.status, 201);
+});
+
+test('Vercel: 정리 작업용 비밀 값이 없어도 정리는 돌고, 12시간에 한 번만 실제로 실행된다', async (t) => {
+  const ctx = await boot(t, { cronSecret: '' });
+  const { base, blob, clock } = ctx;
+  const live = await makeRoom(base, '남는 방');
+  assert.equal((await uploadFile(ctx, live, 'keep.pdf', Buffer.from('keep'))).status, 201);
+  const gone = await makeRoom(base, '사라질 방');
+  assert.equal((await uploadFile(ctx, gone, 'old.pdf', Buffer.from('old!'))).status, 201);
+  assert.equal(blob.pathnames().length, 2);
+
+  // 수업방이 오래돼 사라진 뒤 (살아 있는 방은 그 사이에 선생님이 열어 봄)
+  clock.now += 13 * 24 * 60 * 60 * 1000;
+  await call(base, 'GET', `/api/rooms/${live.code}`, { token: live.token });
+  clock.now += 2 * 24 * 60 * 60 * 1000;
+  assert.equal((await call(base, 'GET', `/api/rooms/${gone.code}`)).status, 404);
+
+  // 비밀 값 없이 불러도 실행되지만, 무엇을 얼마나 지웠는지는 알려 주지 않는다
+  const first = await call(base, 'GET', '/api/cron/cleanup');
+  assert.equal(first.status, 200);
+  assert.deepEqual(first.data, { ok: true });
+  assert.equal(blob.pathnames().length, 1);
+  assert.ok(blob.pathnames()[0].endsWith('/keep.pdf'));
+
+  // 곧바로 다시 부르면 건너뛴다 (저장소를 뒤지지 않음)
+  const operations = blob.operations();
+  for (let i = 0; i < 3; i += 1) {
+    assert.deepEqual((await call(base, 'GET', '/api/cron/cleanup', { token: 'anything' })).data, { ok: true, skipped: true });
+  }
+  assert.equal(blob.operations(), operations);
+
+  // 12시간이 지나면 다시 실행된다
+  clock.now += 12 * 60 * 60 * 1000 + 1000;
+  assert.deepEqual((await call(base, 'GET', '/api/cron/cleanup')).data, { ok: true });
+  assert.ok(blob.operations() > operations);
 });
 
 // ---------------------------------------------------------------- 실제 SDK와의 연결 (패키지가 설치돼 있을 때만)
