@@ -115,7 +115,15 @@ function createAdmin({ kv, rooms, settings, config, now, tools }) {
 
     if (rest === 'overview') {
       if (method !== 'GET') throw new HttpError(405, 'method_not_allowed');
-      const listed = await rooms.list(LIST_MAX);
+      // 목록을 읽지 못해도 나머지(비밀번호 설정 등)는 쓸 수 있게, 실패는 따로 알려 줍니다.
+      let listed = { rooms: [], total: 0 };
+      let roomsError = null;
+      try {
+        listed = await rooms.list(LIST_MAX);
+      } catch (err) {
+        roomsError = String((err && err.message) || err).slice(0, 200);
+        console.error('[admin] 수업방 목록을 읽지 못했습니다:', roomsError);
+      }
       const cleanupAt = toInt(await kv.cmd('GET', 'cfg:cleanup-last'));
       return sendJson(res, 200, {
         rooms: listed.rooms.map((room) => ({
@@ -130,6 +138,7 @@ function createAdmin({ kv, rooms, settings, config, now, tools }) {
           viewers: room.viewers,
         })),
         totalRooms: listed.total,
+        roomsError,
         teacher: describeTeacher(state.teacher),
         admin: { source: state.admin.source, at: state.admin.at || null },
         status: {

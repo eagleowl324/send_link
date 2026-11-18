@@ -344,6 +344,10 @@
       viewers += room.viewers;
       list.appendChild(roomRow(room));
     });
+    // 목록을 읽지 못했을 때는 "없다"가 아니라 읽지 못했다고 알려 줍니다. (이유도 함께: 문제를 찾을 때 필요합니다)
+    $('rooms-empty').textContent = overview.roomsError
+      ? '수업방 목록을 불러오지 못했습니다. (' + overview.roomsError + ')'
+      : '아직 만들어진 수업방이 없습니다.';
     $('rooms-empty').hidden = rooms.length > 0;
     list.hidden = rooms.length === 0;
     var summary = '';

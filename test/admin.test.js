@@ -289,6 +289,28 @@ test('관리자: 수업방 목록(최근에 쓴 순서)과 삭제', async (t) =>
   assert.equal((await call(base, 'GET', '/api/admin/overview', { token: later })).data.status.cleanupAt, clock.now);
 });
 
+test('관리자: 수업방 목록을 읽지 못해도 관리 화면의 나머지는 쓸 수 있다', async (t) => {
+  const ctx = await boot(t);
+  const { base, kv } = ctx;
+  const token = await setUp(ctx);
+  await makeRoom(ctx, '보이지 않을 방');
+  const original = kv.cmd;
+  kv.cmd = async (...args) => {
+    if (args[0] === 'SCAN') throw new Error('ERR scan is not available');
+    return original(...args);
+  };
+  const view = await call(base, 'GET', '/api/admin/overview', { token });
+  assert.equal(view.status, 200);
+  assert.deepEqual(view.data.rooms, []);
+  assert.match(view.data.roomsError, /scan is not available/);
+  assert.equal(view.data.teacher.mode, 'password');
+  assert.equal((await call(base, 'PUT', '/api/admin/teacher', { token, json: { mode: 'open' } })).status, 200);
+  kv.cmd = original;
+  const ok = (await call(base, 'GET', '/api/admin/overview', { token })).data;
+  assert.equal(ok.roomsError, null);
+  assert.equal(ok.rooms.length, 1);
+});
+
 test('관리자: 처음 상태로 되돌리기', async (t) => {
   const ctx = await boot(t);
   const { base } = ctx;
