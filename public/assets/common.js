@@ -151,6 +151,12 @@
     unavailable: '지금은 이 수업방을 열 수 없습니다. 잠시 뒤 다시 시도해 주세요.',
     cross_site: '허용되지 않는 요청입니다.',
     not_configured: '서버 설정이 아직 끝나지 않았습니다. (관리자: 저장소 연결을 확인해 주세요)',
+    setup_required: '아직 설정이 끝나지 않아 수업방을 만들 수 없습니다. 관리자 페이지에서 설정을 마쳐 주세요.',
+    weak_password: '비밀번호가 너무 짧습니다.',
+    already_configured: '이미 관리자가 정해져 있습니다.',
+    admin_not_set: '아직 관리자가 정해지지 않았습니다.',
+    fixed_by_env: '환경 변수로 정해져 있어 여기서는 바꿀 수 없습니다.',
+    unauthorized: '다시 로그인해 주세요.',
     upload_not_found: '올리기 허가 시간이 지났습니다. 다시 시도해 주세요.',
     upload_missing: '파일이 저장소에 올라가지 않았습니다. 다시 시도해 주세요.',
     storage_auth: '파일 저장소에 접속하지 못했습니다. (관리자: Vercel에서 Blob 저장소 연결을 확인해 주세요)',
@@ -348,12 +354,14 @@
 
       var input = null;
       if (options.input) {
+        var secret = options.input.type === 'password';
         input = App.el('input', {
           class: 'input',
-          type: 'text',
-          maxlength: options.input.maxLength || 100,
+          type: secret ? 'password' : 'text',
+          autocomplete: secret ? 'current-password' : null,
+          maxlength: options.input.maxLength || (secret ? 200 : 100),
           placeholder: options.input.placeholder || '',
-          'aria-label': options.title
+          'aria-label': options.input.placeholder || options.title
         });
         input.value = options.input.value || '';
       }

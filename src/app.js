@@ -637,6 +637,8 @@ async function createApp(config) {
     let { pathname } = url;
     if (pathname === '/') return sendStatic(req, res, statics.get('/index.html'), true);
     if (/^\/\d{6}$/.test(pathname)) return sendStatic(req, res, statics.get('/room.html'), true);
+    // 관리자 페이지는 Vercel용에만 있습니다. 여기서는 화면이 "지원하지 않는다"고 안내합니다.
+    if (pathname === '/admin') return sendStatic(req, res, statics.get('/admin.html'), true);
     if (pathname === '/favicon.ico') pathname = '/assets/favicon.svg';
 
     const entry = statics.get(pathname);

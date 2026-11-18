@@ -215,6 +215,56 @@ function createRooms({ kv, config, now = () => Date.now() }) {
       return items;
     },
 
+    // 관리자용: 지금 있는 수업방 전체를 최근에 쓴 순서로. (limit개까지만 자세히 읽고, total은 전체 개수)
+    async list(limit) {
+      const codes = new Set();
+      let cursor = '0';
+      for (let round = 0; round < 200; round += 1) {
+        const reply = await kv.cmd('SCAN', cursor, 'MATCH', 'r:??????', 'COUNT', 500);
+        const keys = Array.isArray(reply) && Array.isArray(reply[1]) ? reply[1] : [];
+        for (const key of keys) {
+          const m = /^r:(\d{6})$/.exec(String(key));
+          if (m) codes.add(m[1]);
+        }
+        cursor = Array.isArray(reply) ? String(reply[0]) : '0';
+        if (cursor === '0') break;
+      }
+      const all = Array.from(codes).sort();
+      const picked = all.slice(0, limit);
+      if (!picked.length) return { rooms: [], total: 0 };
+
+      const at = now();
+      const commands = [];
+      for (const code of picked) {
+        commands.push(['HMGET', roomKey(code), 'n', 'h', 'k', 'c', 'b']);
+        commands.push(['TTL', roomKey(code)]);
+        commands.push(['HLEN', itemsKey(code)]);
+        commands.push(['ZCOUNT', seenKey(code), at + 1, '+inf']);
+      }
+      const results = await kv.pipeline(commands);
+      const found = [];
+      let missing = 0;
+      picked.forEach((code, index) => {
+        const [n, h, k, c, b] = results[index * 4] || [];
+        if (!h || !k) {
+          missing += 1; // 만드는 도중이거나 그 사이 사라진 방
+          return;
+        }
+        const ttl = Number(results[index * 4 + 1]);
+        found.push({
+          code,
+          name: n || '',
+          createdAt: toInt(c),
+          bytes: toInt(b),
+          items: toInt(results[index * 4 + 2]),
+          viewers: toInt(results[index * 4 + 3]),
+          expiresAt: ttl > 0 ? at + ttl * 1000 : 0,
+        });
+      });
+      found.sort((a, b) => b.expiresAt - a.expiresAt || b.createdAt - a.createdAt);
+      return { rooms: found, total: all.length - missing };
+    },
+
     // ------------------------------------------------------------ 접속자
 
     // 생존 신호. 선생님 화면은 세지 않습니다. wantCount면 지금 접속자 수를 함께 돌려줍니다.

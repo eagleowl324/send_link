@@ -1,12 +1,12 @@
 {
   "name": "class-share",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "private": true,
   "description": "수업 중에 링크·텍스트·파일을 학생에게 바로 전달하는 작은 웹 서비스",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "test": "node --test test/api.test.js test/vercel.test.js test/blob.test.js",
+    "test": "node --test test/api.test.js test/vercel.test.js test/blob.test.js test/admin.test.js",
     "build:vercel": "node scripts/build-vercel.js",
     "dev:vercel": "node scripts/dev-vercel.js"
   },

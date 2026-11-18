@@ -12,7 +12,8 @@
   },
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/index?__path=$1" },
-    { "source": "/:code(\\d{6})", "destination": "/room.html" }
+    { "source": "/:code(\\d{6})", "destination": "/room.html" },
+    { "source": "/admin", "destination": "/admin.html" }
   ],
   "headers": [
     {

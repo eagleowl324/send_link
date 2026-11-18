@@ -243,6 +243,18 @@ test('화면과 보안 헤더', async (t) => {
   assert.equal(room.status, 200);
   assert.match(room.text, /id="feed"/);
 
+  // 관리자 페이지는 Vercel용에만 있다. 여기서는 화면만 열리고(지원하지 않는다고 안내), 관리자 API는 없다
+  const admin = await call(base, 'GET', '/admin');
+  assert.equal(admin.status, 200);
+  assert.match(admin.text, /id="setup-form"/);
+  assert.ok(!admin.text.includes('{{SITE_NAME}}'));
+  const adminApi = await call(base, 'GET', '/api/admin');
+  assert.equal(adminApi.status, 404);
+  assert.equal(adminApi.data.error, 'not_found');
+  const config = (await call(base, 'GET', '/api/config')).data;
+  assert.equal(config.admin, undefined);
+  assert.equal(config.setupRequired, undefined);
+
   const css = await call(base, 'GET', '/assets/app.css');
   assert.equal(css.status, 200);
   assert.match(css.headers.get('content-type'), /text\/css/);
@@ -256,7 +268,7 @@ test('화면과 보안 헤더', async (t) => {
   assert.equal(redirected.status, 302);
   assert.equal(redirected.headers.get('location'), '/483920');
 
-  for (const bad of ['/nope', '/12345', '/1234567', '/index.html', '/room.html', '/assets/', '/assets/../server.js',
+  for (const bad of ['/nope', '/12345', '/1234567', '/index.html', '/room.html', '/admin.html', '/admin/', '/assets/', '/assets/../server.js',
     '/assets/%2e%2e/server.js', '/assets/..%2f..%2fserver.js', '/%2e%2e/package.json', '/src/app.js', '/.git/config']) {
     const res = await rawRequest(base, { pathname: bad });
     assert.equal(res.status, 404, bad);

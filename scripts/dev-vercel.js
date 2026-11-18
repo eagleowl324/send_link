@@ -78,6 +78,7 @@ function createDevServer(env = process.env) {
         return;
       }
       if (/^\/\d{6}$/.test(pathname)) return sendFile(res, path.join(dist, 'room.html'), 200); // rewrites
+      if (pathname === '/admin') return sendFile(res, path.join(dist, 'admin.html'), 200); // rewrites
       const relative = pathname === '/' ? 'index.html' : pathname.slice(1);
       const file = path.join(dist, relative);
       if (!file.startsWith(dist + path.sep) || pathname.includes('..')) return sendFile(res, path.join(dist, '404.html'), 404);

@@ -25,7 +25,10 @@ function loadVercelConfig(env = process.env) {
   return {
     siteName: base.siteName,
     publicUrl: base.publicUrl,
+    // 수업방을 만들 때 물어볼 비밀번호와 관리자 비밀번호. 보통은 관리자 페이지(/admin)에서 정하지만,
+    // 환경 변수로 지정하면 그것이 우선하고 화면에서는 바꿀 수 없습니다.
     teacherPassword: base.teacherPassword,
+    adminPassword: pick(env, ['ADMIN_PASSWORD']),
     maxFileBytes: base.maxFileBytes,
     maxRoomBytes: base.maxRoomBytes,
     maxTextBytes: base.maxTextBytes,

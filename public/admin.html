@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="color-scheme" content="light dark">
+<meta name="format-detection" content="telephone=no">
+<title>관리자 · {{SITE_NAME}}</title>
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/assets/app.css">
+</head>
+<body class="page-admin" data-state="loading">
+
+<header class="topbar">
+  <a class="brand" href="/" aria-label="{{SITE_NAME}} 처음 화면">
+    <span class="brand__mark" aria-hidden="true"></span>
+    <span class="brand__name">{{SITE_NAME}}</span>
+  </a>
+  <h1 class="topbar__title">관리자</h1>
+  <div class="topbar__meta">
+    <button class="btn btn--sm" id="logout" type="button" hidden>로그아웃</button>
+  </div>
+</header>
+
+<main class="admin">
+  <div class="loading" id="loading" role="status">불러오는 중…</div>
+
+  <!-- 처음 설정: 아직 관리자가 없을 때 -->
+  <section class="card admin__gate" id="setup" hidden aria-labelledby="setup-title">
+    <h2 class="admin__gate-title" id="setup-title">관리자 비밀번호 만들기</h2>
+    <p class="admin__lead">이 사이트를 관리할 비밀번호를 정해 주세요. 관리자 페이지에서는 수업방을 만들 때 물어볼 비밀번호를 정하고, 만들어진 수업방을 살펴보거나 지울 수 있습니다.</p>
+    <form id="setup-form" novalidate>
+      <div class="field" id="setup-proof-field" hidden>
+        <label for="setup-proof">지금 쓰고 있는 수업방 생성 비밀번호</label>
+        <input class="input" id="setup-proof" type="password" autocomplete="off" maxlength="200" aria-describedby="setup-proof-hint">
+        <p class="hint" id="setup-proof-hint">이미 사용 중인 사이트라서, 수업방 생성 비밀번호를 아는 분만 관리자가 될 수 있습니다.</p>
+      </div>
+      <div class="field">
+        <label for="setup-password">관리자 비밀번호 <span class="optional">(8자 이상)</span></label>
+        <input class="input" id="setup-password" type="password" autocomplete="new-password" maxlength="200">
+      </div>
+      <div class="field">
+        <label for="setup-confirm">한 번 더 입력</label>
+        <input class="input" id="setup-confirm" type="password" autocomplete="new-password" maxlength="200">
+      </div>
+      <button class="btn btn--primary btn--block" id="setup-button" type="submit">만들고 시작하기</button>
+      <p class="form-error" id="setup-error" role="alert" hidden></p>
+    </form>
+    <p class="hint">정한 비밀번호는 다시 볼 수 없으니 잊지 않게 적어 두세요.</p>
+  </section>
+
+  <!-- 로그인 -->
+  <section class="card admin__gate" id="login" hidden aria-labelledby="login-title">
+    <h2 class="admin__gate-title" id="login-title">관리자 로그인</h2>
+    <form id="login-form" novalidate>
+      <div class="field">
+        <label for="login-password">관리자 비밀번호</label>
+        <input class="input" id="login-password" type="password" autocomplete="current-password" maxlength="200">
+      </div>
+      <button class="btn btn--primary btn--block" id="login-button" type="submit">로그인</button>
+      <p class="form-error" id="login-error" role="alert" hidden></p>
+    </form>
+  </section>
+
+  <!-- 쓸 수 없거나 불러오지 못한 경우 -->
+  <section class="screen" id="notice" hidden>
+    <h2 id="notice-title"></h2>
+    <p id="notice-text"></p>
+    <a class="btn btn--primary" href="/">처음 화면으로</a>
+  </section>
+
+  <!-- 관리 화면 -->
+  <div class="admin__board" id="board" hidden>
+
+    <section class="card" aria-labelledby="teacher-title">
+      <h2 class="admin__title" id="teacher-title">수업방 만들기 비밀번호</h2>
+      <p class="admin__state" id="teacher-state"></p>
+      <form id="teacher-form" novalidate>
+        <label class="label" for="teacher-password" id="teacher-label">새 비밀번호 <span class="optional">(4자 이상)</span></label>
+        <div class="admin__row">
+          <input class="input" id="teacher-password" type="password" autocomplete="new-password" maxlength="200">
+          <button class="btn btn--primary" id="teacher-save" type="submit">저장</button>
+        </div>
+        <label class="check"><input type="checkbox" id="teacher-show"> 입력한 글자 보기</label>
+        <p class="form-error" id="teacher-error" role="alert" hidden></p>
+        <p class="admin__alt" id="teacher-open-row">
+          <button class="btn btn--sm" id="teacher-open" type="button">비밀번호 없이 누구나 만들 수 있게 하기</button>
+        </p>
+      </form>
+    </section>
+
+    <section class="card" aria-labelledby="rooms-title">
+      <div class="admin__head">
+        <h2 class="admin__title" id="rooms-title">수업방</h2>
+        <button class="btn btn--sm" id="rooms-refresh" type="button">새로 고침</button>
+      </div>
+      <p class="admin__summary" id="rooms-summary"></p>
+      <ul class="admin-rooms" id="rooms-list"></ul>
+      <p class="admin__empty" id="rooms-empty" hidden>아직 만들어진 수업방이 없습니다.</p>
+    </section>
+
+    <section class="card" aria-labelledby="status-title">
+      <h2 class="admin__title" id="status-title">사이트 상태</h2>
+      <dl class="admin-facts" id="status-list"></dl>
+    </section>
+
+    <section class="card" aria-labelledby="account-title">
+      <h2 class="admin__title" id="account-title">관리자 비밀번호</h2>
+      <p class="admin__state" id="account-state" hidden></p>
+      <details class="admin__more" id="account-details">
+      <summary>관리자 비밀번호 바꾸기</summary>
+      <form id="account-form" novalidate>
+        <div class="field">
+          <label for="account-current">지금 비밀번호</label>
+          <input class="input" id="account-current" type="password" autocomplete="current-password" maxlength="200">
+        </div>
+        <div class="field">
+          <label for="account-next">새 비밀번호 <span class="optional">(8자 이상)</span></label>
+          <input class="input" id="account-next" type="password" autocomplete="new-password" maxlength="200">
+        </div>
+        <div class="field">
+          <label for="account-confirm">새 비밀번호 한 번 더</label>
+          <input class="input" id="account-confirm" type="password" autocomplete="new-password" maxlength="200">
+        </div>
+        <button class="btn btn--primary" id="account-save" type="submit">바꾸기</button>
+        <p class="form-error" id="account-error" role="alert" hidden></p>
+      </form>
+      </details>
+      <div class="admin__danger">
+        <p>처음 상태로 되돌리면 관리자 비밀번호와 수업방 만들기 비밀번호가 지워지고, 다시 설정하기 전까지는 새 수업방을 만들 수 없습니다. 이미 만든 수업방은 그대로 남습니다.</p>
+        <button class="btn btn--sm btn--danger" id="reset" type="button">처음 상태로 되돌리기</button>
+      </div>
+    </section>
+
+  </div>
+</main>
+
+<div class="toasts" id="toasts" role="status" aria-live="polite"></div>
+
+<script src="/assets/common.js" defer></script>
+<script src="/assets/admin.js" defer></script>
+</body>
+</html>

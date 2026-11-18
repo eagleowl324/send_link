@@ -11,6 +11,8 @@
 
 const util = require('../util');
 const { createRooms } = require('./rooms');
+const { createSettings } = require('./settings');
+const { createAdmin } = require('./admin');
 
 const STORE_STATUS = {
   too_many_items: 409,
@@ -45,6 +47,7 @@ class HttpError extends Error {
 
 function createHandler({ kv, blob, config, now = () => Date.now() }) {
   const rooms = createRooms({ kv, config, now });
+  const settings = createSettings({ kv, config, now });
 
   // ------------------------------------------------------------ 응답
 
@@ -205,10 +208,13 @@ function createHandler({ kv, blob, config, now = () => Date.now() }) {
     return { id: item.id, type: 'text', at: item.at, text: item.text, mono: Boolean(item.mono) };
   }
 
-  function publicConfig() {
+  function publicConfig(state) {
     return {
       siteName: config.siteName,
-      requirePassword: Boolean(config.teacherPassword),
+      requirePassword: state.teacher.mode === 'password',
+      // 관리자 페이지(/admin)가 있고, 거기서 설정을 마쳐야 수업방을 만들 수 있는지
+      admin: true,
+      setupRequired: state.setupRequired,
       transport: 'poll',
       upload: 'blob',
       pollMs: config.pollMs,
@@ -253,8 +259,12 @@ function createHandler({ kv, blob, config, now = () => Date.now() }) {
 
     if (pathname === '/api/config') {
       if (req.method !== 'GET') throw new HttpError(405, 'method_not_allowed');
-      return sendJson(res, 200, publicConfig(), cdnCache(60));
+      const state = await settings.state();
+      // 설정을 마치기 전의 답은 캐시하지 않습니다. (설정을 끝내자마자 수업방을 만들 수 있도록)
+      return sendJson(res, 200, publicConfig(state), state.setupRequired ? NO_STORE : cdnCache(60));
     }
+    const adminMatch = /^\/api\/admin(?:\/(.*))?$/.exec(pathname);
+    if (adminMatch) return admin(req, res, adminMatch[1] || '');
     if (pathname === '/api/rooms') {
       if (req.method !== 'POST') throw new HttpError(405, 'method_not_allowed');
       return createRoom(req, res);
@@ -271,12 +281,14 @@ function createHandler({ kv, blob, config, now = () => Date.now() }) {
     if (attempts > CREATE_MAX) throw new HttpError(429, 'too_many_attempts', { retryAfter: CREATE_WINDOW_SEC });
     const body = await readJson(req, 8 * 1024);
 
-    if (config.teacherPassword) {
+    const state = await settings.state();
+    // 관리자 페이지에서 설정을 마치기 전에는 수업방을 만들 수 없습니다.
+    if (state.setupRequired) throw new HttpError(503, 'setup_required');
+    if (state.teacher.mode === 'password') {
       if ((await rooms.count('p', key)) >= PASSWORD_MAX) {
         throw new HttpError(429, 'too_many_attempts', { retryAfter: PASSWORD_WINDOW_SEC });
       }
-      const given = typeof body.password === 'string' ? body.password : '';
-      if (!util.safeEqual(given, config.teacherPassword)) {
+      if (!(await settings.checkTeacher(body.password, state))) {
         await rooms.hit('p', key, PASSWORD_WINDOW_SEC);
         throw new HttpError(403, 'bad_password');
       }
@@ -525,9 +537,19 @@ function createHandler({ kv, blob, config, now = () => Date.now() }) {
       cursor = page.hasMore && now() - startedAt <= budgetMs ? page.cursor : undefined;
     } while (cursor);
 
+    await kv.cmd('SET', 'cfg:cleanup-last', String(now())); // 관리자 페이지에 보여 줄 마지막 실행 시각
     // 얼마나 지웠는지는 비밀 값을 가진 요청에만 알려 줍니다.
     sendJson(res, 200, trusted ? { ok: true, folders, removedFolders, removedFiles } : { ok: true });
   }
+
+  const admin = createAdmin({
+    kv,
+    rooms,
+    settings,
+    config,
+    now,
+    tools: { HttpError, sendJson, readJson, clientKey, bearer, removeFiles },
+  });
 
   return async function handler(req, res) {
     try {

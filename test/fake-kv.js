@@ -3,7 +3,8 @@
 // 테스트와 로컬 실행용: Redis 명령 가운데 이 서비스가 쓰는 것만 흉내 내는 메모리 저장소.
 // src/vercel/kv.js 의 createKv 와 같은 모양(cmd / pipeline / multi)을 제공합니다.
 
-function createFakeKv({ now = () => Date.now() } = {}) {
+// scanPage: SCAN이 한 번에 훑는 키 개수의 상한 (작게 주면 여러 번에 나눠 돌려주는 상황을 시험할 수 있습니다)
+function createFakeKv({ now = () => Date.now(), scanPage = Infinity } = {}) {
   const data = new Map(); // key -> { type: 'string'|'hash'|'zset', value, expires }
   let commands = 0;
 
@@ -71,6 +72,32 @@ function createFakeKv({ now = () => Date.now() } = {}) {
         if (nx && live(key)) return null;
         data.set(key, { type: 'string', value: String(rest[0]), expires: ttl === null ? null : now() + ttl });
         return 'OK';
+      }
+      case 'MGET':
+        return [key, ...rest].map((k) => {
+          const entry = typed(k, 'string');
+          return entry ? entry.value : null;
+        });
+      case 'SCAN': {
+        // SCAN cursor [MATCH 패턴] [COUNT n]. 여기서 key 자리에 온 것이 cursor(몇 번째부터인지)입니다.
+        let pattern = null;
+        let count = 10;
+        for (let i = 0; i < rest.length; i += 1) {
+          const flag = String(rest[i]).toUpperCase();
+          if (flag === 'MATCH') pattern = String(rest[(i += 1)]);
+          else if (flag === 'COUNT') count = int(rest[(i += 1)]);
+          else throw new Error('ERR syntax error');
+        }
+        const all = Array.from(data.keys())
+          .filter((k) => live(k))
+          .sort();
+        const start = int(key);
+        const size = Math.max(1, Math.min(count, scanPage));
+        const page = all.slice(start, start + size);
+        const test = pattern
+          ? new RegExp('^' + pattern.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*').replace(/\?/g, '.') + '$')
+          : null;
+        return [start + size >= all.length ? '0' : String(start + size), page.filter((k) => !test || test.test(k))];
       }
       case 'DEL': {
         let removed = 0;

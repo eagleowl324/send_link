@@ -90,10 +90,27 @@
       function (err) {
         creating = false;
         $('create-button').disabled = false;
+        if (err.code === 'setup_required') {
+          needSetup(true);
+          return;
+        }
+        // 방금 비밀번호가 정해져서 이 화면이 아직 모르고 있던 경우: 입력 칸을 보여 줍니다.
+        if (err.code === 'bad_password' && passwordField.hidden) {
+          passwordField.hidden = false;
+          showError(createError, '수업방 생성 비밀번호를 입력해 주세요.');
+          $('room-password').focus();
+          return;
+        }
         showError(createError, A.errorText(err));
       }
     );
   });
+
+  // 관리자 설정을 마치기 전에는 수업방을 만들 수 없습니다. 만들기 칸 대신 안내를 보여 줍니다.
+  function needSetup(needed) {
+    $('setup-note').hidden = !needed;
+    $('create-form').hidden = needed;
+  }
 
   // ------------------------------------------------------------ 이 기기에서 만든 수업방
 
@@ -139,6 +156,8 @@
   A.api('GET', '/api/config').then(
     function (config) {
       $('password-field').hidden = !config.requirePassword;
+      $('admin-link').hidden = !config.admin;
+      needSetup(Boolean(config.setupRequired));
       var days = config.roomTtlMs / 86400000;
       var keep = days >= 1 ? Math.round(days) + '일' : Math.max(1, Math.round(days * 24)) + '시간';
       $('footnote').textContent =

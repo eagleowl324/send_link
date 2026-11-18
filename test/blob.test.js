@@ -9,7 +9,7 @@ const assert = require('node:assert/strict');
 const http = require('node:http');
 
 const { startFakeBlobApi } = require('./fake-blob-api');
-const { createFakeKv } = require('./fake-kv');
+const { startFakeUpstash } = require('./fake-upstash');
 const { oidcTokenOf, withRequest, currentOidcToken } = require('../src/vercel/oidc');
 const { loadVercelConfig, storageVariableNames } = require('../src/vercel/config');
 
@@ -262,36 +262,8 @@ test('설정: Blob 연결 방식과 저장소 관련 환경 변수 이름', () =
 
 // ---------------------------------------------------------------- 함수 진입점 (api/index.js) 전체 흐름
 
-// Upstash의 REST 방식(POST / , /pipeline, /multi-exec)으로 메모리 Redis를 내놓습니다.
-async function startFakeUpstash() {
-  const kv = createFakeKv();
-  const one = async (args) => {
-    try {
-      return { result: await kv.cmd(...args) };
-    } catch (err) {
-      return { error: err.message };
-    }
-  };
-  const server = http.createServer(async (req, res) => {
-    const chunks = [];
-    for await (const chunk of req) chunks.push(chunk);
-    const body = JSON.parse(Buffer.concat(chunks).toString());
-    let out;
-    if (req.url === '/pipeline' || req.url === '/multi-exec') {
-      out = [];
-      for (const args of body) out.push(await one(args));
-    } else {
-      out = await one(body);
-    }
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify(out));
-  });
-  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
-  return { kv, base: `http://127.0.0.1:${server.address().port}`, close: () => new Promise((resolve) => server.close(resolve)) };
-}
-
 function freshEntry(env) {
-  const names = ['KV_REST_API_URL', 'KV_REST_API_TOKEN', 'UPSTASH_REDIS_REST_URL', 'UPSTASH_REDIS_REST_TOKEN', 'BLOB_READ_WRITE_TOKEN', 'BLOB_STORE_ID', 'BLOB_ACCESS', 'REDIS_URL', 'KV_URL', 'VERCEL_GIT_COMMIT_SHA', 'VERCEL_OIDC_TOKEN', 'TEACHER_PASSWORD'];
+  const names = ['KV_REST_API_URL', 'KV_REST_API_TOKEN', 'UPSTASH_REDIS_REST_URL', 'UPSTASH_REDIS_REST_TOKEN', 'BLOB_READ_WRITE_TOKEN', 'BLOB_STORE_ID', 'BLOB_ACCESS', 'REDIS_URL', 'KV_URL', 'VERCEL_GIT_COMMIT_SHA', 'VERCEL_OIDC_TOKEN', 'TEACHER_PASSWORD', 'ADMIN_PASSWORD'];
   const saved = {};
   for (const name of names) {
     saved[name] = process.env[name];
@@ -333,6 +305,7 @@ test('함수 진입점(BLOB_STORE_ID 방식): 요청과 함께 온 신원 토큰
     KV_REST_API_URL: upstash.base,
     KV_REST_API_TOKEN: 'redis-token',
     BLOB_STORE_ID: 'store_E2EStore',
+    TEACHER_PASSWORD: 'room-pass',
     VERCEL_GIT_COMMIT_SHA: 'abc1234' + '0'.repeat(33),
   });
   const server = http.createServer(entry.fn);
@@ -351,7 +324,9 @@ test('함수 진입점(BLOB_STORE_ID 방식): 요청과 함께 온 신원 토큰
   assert.equal(config.data.upload, 'blob');
   assert.equal(config.data.build, 'abc1234');
 
-  const room = (await request(base, 'POST', '/api/rooms', { json: { name: '진입점 확인' } })).data;
+  assert.equal(config.data.requirePassword, true);
+
+  const room = (await request(base, 'POST', '/api/rooms', { json: { name: '진입점 확인', password: 'room-pass' } })).data;
   assert.match(room.code, /^\d{6}$/);
   const upload = `/api/rooms/${room.code}/upload`;
 

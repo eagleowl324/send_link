@@ -1304,6 +1304,248 @@ dialog::backdrop {
   text-align: center;
 }
 
+/* ------------------------------------------------------------ 처음 설정 안내 (처음 화면) */
+
+.setup-note {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border-radius: var(--radius-sm);
+  background: var(--warn-soft);
+  color: var(--warn);
+  font-size: 14.5px;
+  font-weight: 600;
+}
+
+.footnote a {
+  color: inherit;
+}
+
+/* ------------------------------------------------------------ 관리자 페이지 */
+
+.admin {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 24px 16px 80px;
+}
+
+.admin__gate {
+  max-width: 440px;
+  margin: 40px auto 0;
+}
+
+.admin__gate-title {
+  margin-bottom: 8px;
+  font-size: 20px;
+}
+
+.admin__lead {
+  margin-bottom: 18px;
+  color: var(--text-2);
+  font-size: 15px;
+}
+
+.admin__board {
+  display: grid;
+  gap: 18px;
+}
+
+.admin__title {
+  margin-bottom: 10px;
+  font-size: 17px;
+}
+
+.admin__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.admin__head .admin__title {
+  margin-bottom: 0;
+}
+
+.admin__state {
+  margin-bottom: 14px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--text-2);
+  font-size: 14.5px;
+}
+
+.admin__state--ok {
+  background: var(--ok-soft);
+  color: var(--ok);
+  font-weight: 600;
+}
+
+.admin__state--warn {
+  background: var(--warn-soft);
+  color: var(--warn);
+  font-weight: 600;
+}
+
+.admin__row {
+  display: flex;
+  gap: 8px;
+}
+
+.admin__row .input {
+  flex: 1;
+  min-width: 0;
+}
+
+.admin__row .btn {
+  min-height: 46px;
+}
+
+.admin__alt {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.admin__summary {
+  margin-bottom: 12px;
+  color: var(--text-2);
+  font-size: 14px;
+}
+
+.admin__empty {
+  padding: 18px 0 6px;
+  color: var(--text-3);
+  text-align: center;
+}
+
+.admin-rooms {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.admin-room {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+
+.admin-room__main {
+  min-width: 0;
+}
+
+.admin-room__name {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-weight: 700;
+}
+
+.admin-room__label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-room__code {
+  flex: none;
+  color: var(--primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.admin-room__meta {
+  margin-top: 3px;
+  color: var(--text-3);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.admin-room__actions {
+  display: flex;
+  flex: none;
+  gap: 6px;
+}
+
+.admin-facts {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 8px 16px;
+  margin: 0;
+  font-size: 14.5px;
+}
+
+.admin-facts dt {
+  color: var(--text-3);
+  font-weight: 600;
+}
+
+.admin-facts dd {
+  margin: 0;
+}
+
+.admin__more summary {
+  width: max-content;
+  max-width: 100%;
+  padding: 6px 2px;
+  color: var(--text-2);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.admin__more[open] summary {
+  margin-bottom: 12px;
+}
+
+.admin__danger {
+  margin-top: 14px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+.admin__danger p {
+  margin-bottom: 10px;
+  color: var(--text-3);
+  font-size: 13.5px;
+}
+
+@media (max-width: 560px) {
+  .admin {
+    padding: 16px 12px 72px;
+  }
+
+  .admin__gate {
+    margin-top: 16px;
+  }
+
+  .admin-room {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .admin-room__actions {
+    justify-content: flex-end;
+  }
+
+  .admin-facts {
+    grid-template-columns: 1fr;
+    gap: 2px 0;
+  }
+
+  .admin-facts dd {
+    margin-bottom: 8px;
+  }
+}
+
 /* ------------------------------------------------------------ 좁은 화면 */
 
 @media (max-width: 560px) {

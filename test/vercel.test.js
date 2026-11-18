@@ -12,12 +12,18 @@ const { createHandler } = require('../src/vercel/handler');
 const { createFakeKv } = require('./fake-kv');
 const { createFakeBlob } = require('./fake-blob');
 
+// 대부분의 테스트는 관리자 설정을 마친 사이트에서 시작한다: 관리자가 정해져 있고, 수업방은 비밀번호 없이 만들 수 있다.
+// (처음 설정 과정과 관리자 기능은 test/admin.test.js)
 async function boot(t, overrides = {}, env = {}) {
   const clock = { now: Date.now() };
   const now = () => clock.now;
   const kv = createFakeKv({ now });
   const blob = createFakeBlob({ now, baseUrl: 'https://blob.example' });
-  const config = Object.assign(loadVercelConfig(Object.assign({ CRON_SECRET: 'cron-secret-value' }, env)), overrides);
+  const config = Object.assign(
+    loadVercelConfig(Object.assign({ CRON_SECRET: 'cron-secret-value', ADMIN_PASSWORD: 'admin-password-for-tests' }, env)),
+    overrides
+  );
+  if (!config.teacherPassword) await kv.cmd('SET', 'cfg:teacher', JSON.stringify({ mode: 'open', at: clock.now }));
   const handler = createHandler({ kv, blob, config, now });
   const server = http.createServer(handler);
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
@@ -518,13 +524,18 @@ test('Vercel: 실제 SDK로 만든 업로드 허가증', { skip: !sdkInstalled &
   assert.equal((/defaultVercelBlobApiUrl = "([^"]+)"/.exec(source) || [])[1], BLOB_API_URL);
 });
 
-test('Vercel: 함수 진입점이 SDK와 함께 올라온다', { skip: !sdkInstalled && '@vercel/blob 미설치' }, async () => {
+test('Vercel: 함수 진입점이 SDK와 함께 올라온다', { skip: !sdkInstalled && '@vercel/blob 미설치' }, async (t) => {
+  const { startFakeUpstash } = require('./fake-upstash');
+  const upstash = await startFakeUpstash();
+  t.after(() => upstash.close());
   const saved = {};
   const env = {
-    KV_REST_API_URL: 'https://example.invalid',
+    KV_REST_API_URL: upstash.base,
     KV_REST_API_TOKEN: 't',
     BLOB_READ_WRITE_TOKEN: 'vercel_blob_rw_Store_' + 'y'.repeat(20),
     BLOB_STORE_ID: '',
+    TEACHER_PASSWORD: '',
+    ADMIN_PASSWORD: '',
   };
   for (const name of Object.keys(env)) {
     saved[name] = process.env[name];
@@ -532,7 +543,7 @@ test('Vercel: 함수 진입점이 SDK와 함께 올라온다', { skip: !sdkInsta
   }
   delete require.cache[require.resolve('../api/index.js')];
   const fn = require('../api/index.js');
-  // 설정 조회는 저장소에 접속하지 않으므로, 여기까지 오면 조립이 된 것이다
+  // 설정 조회는 파일 저장소에 접속하지 않으므로, 여기까지 오면 조립이 된 것이다
   const out = await new Promise((resolve) => {
     const res = {
       headersSent: false,
@@ -551,4 +562,7 @@ test('Vercel: 함수 진입점이 SDK와 함께 올라온다', { skip: !sdkInsta
   assert.equal(out.status, 200);
   assert.equal(out.data.transport, 'poll');
   assert.equal(out.data.maxFileBytes, 50 * 1024 * 1024);
+  // 아무것도 정하지 않은 새 사이트: 관리자 페이지에서 설정을 마쳐야 한다
+  assert.equal(out.data.admin, true);
+  assert.equal(out.data.setupRequired, true);
 });

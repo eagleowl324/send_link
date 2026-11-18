@@ -35,6 +35,10 @@
 
   <section class="card" aria-labelledby="create-title">
     <h2 id="create-title"><small>선생님</small>수업방 만들기</h2>
+    <div class="setup-note" id="setup-note" hidden>
+      <p>처음 한 번, 관리자 설정이 필요합니다. 관리자 페이지에서 비밀번호를 정하면 수업방을 만들 수 있습니다.</p>
+      <a class="btn btn--primary btn--block" href="/admin">관리자 설정하기</a>
+    </div>
     <form id="create-form" novalidate>
       <div class="field">
         <label for="room-name">수업방 이름 <span class="optional">(선택)</span></label>
@@ -55,6 +59,7 @@
   </section>
 
   <p class="footnote" id="footnote">수업방을 만들면 학생용 주소와 QR 코드가 생깁니다.</p>
+  <p class="footnote" id="admin-link" hidden><a href="/admin">관리자 페이지</a></p>
 </main>
 
 <div class="toasts" id="toasts" role="status" aria-live="polite"></div>
