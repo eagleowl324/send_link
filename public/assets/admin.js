@@ -229,13 +229,13 @@
     var state = $('teacher-state');
     var form = $('teacher-form');
     state.className = 'admin__state';
-    if (teacher.source === 'env') {
-      state.textContent = '환경 변수(TEACHER_PASSWORD)로 정해져 있습니다. 바꾸려면 Vercel에서 환경 변수를 고친 뒤 다시 배포해 주세요.';
-      form.hidden = true;
-      return;
-    }
     form.hidden = false;
-    if (teacher.mode === 'password') {
+    if (teacher.source === 'env') {
+      // Vercel의 환경 변수(TEACHER_PASSWORD)에 넣어 둔 비밀번호를 쓰는 중. 여기서 정하면 그쪽이 우선합니다.
+      state.textContent = '수업방을 만들 때 비밀번호를 물어봅니다. (Vercel 환경 변수에 넣어 둔 비밀번호) 여기서 새로 정하면 새 비밀번호를 대신 쓰게 됩니다.';
+      state.className = 'admin__state admin__state--ok';
+      $('teacher-open-row').hidden = false;
+    } else if (teacher.mode === 'password') {
       state.textContent = '수업방을 만들 때 비밀번호를 물어봅니다.' + (teacher.at ? ' (' + A.formatTime(teacher.at) + '에 정함)' : '');
       state.className = 'admin__state admin__state--ok';
       $('teacher-open-row').hidden = false;
@@ -460,7 +460,7 @@
   $('reset').addEventListener('click', function () {
     A.ask({
       title: '처음 상태로 되돌릴까요?',
-      message: '관리자 비밀번호와 수업방 만들기 비밀번호가 지워지고, 다시 설정하기 전까지는 새 수업방을 만들 수 없습니다. 계속하려면 관리자 비밀번호를 입력해 주세요.',
+      message: '관리자 비밀번호와 여기서 정한 수업방 만들기 비밀번호가 지워지고, 처음 설정부터 다시 해야 합니다. 계속하려면 관리자 비밀번호를 입력해 주세요.',
       input: { type: 'password', placeholder: '관리자 비밀번호' },
       okLabel: '되돌리기',
       danger: true

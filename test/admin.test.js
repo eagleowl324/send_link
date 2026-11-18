@@ -311,7 +311,7 @@ test('관리자: 처음 상태로 되돌리기', async (t) => {
   assert.equal((await call(base, 'GET', '/api/admin/overview', { token: again.data.token })).data.rooms.length, 1);
 });
 
-test('관리자: 환경 변수로 정한 비밀번호가 우선하고, 화면에서는 바꿀 수 없다', async (t) => {
+test('관리자: 환경 변수의 관리자 비밀번호는 화면에서 바꿀 수 없고, 수업방 만들기 비밀번호는 화면에서 정한 것이 우선한다', async (t) => {
   const ctx = await boot(t, { ADMIN_PASSWORD: 'env-admin-password', TEACHER_PASSWORD: 'env-room' });
   const { base } = ctx;
   assert.deepEqual((await call(base, 'GET', '/api/admin')).data, { configured: true, needsProof: false, setupRequired: false, signedIn: false });
@@ -321,13 +321,30 @@ test('관리자: 환경 변수로 정한 비밀번호가 우선하고, 화면에
   const view = (await call(base, 'GET', '/api/admin/overview', { token })).data;
   assert.deepEqual(view.teacher, { mode: 'password', source: 'env', at: null });
   assert.deepEqual(view.admin, { source: 'env', at: null });
-  assert.equal((await call(base, 'PUT', '/api/admin/teacher', { token, json: { mode: 'open' } })).data.error, 'fixed_by_env');
   assert.equal(
     (await call(base, 'PUT', '/api/admin/password', { token, json: { current: 'env-admin-password', next: 'another-password' } })).data.error,
     'fixed_by_env'
   );
   assert.equal((await call(base, 'POST', '/api/rooms', { json: { name: 'x', password: 'env-room' } })).status, 201);
   assert.equal((await call(base, 'POST', '/api/rooms', { json: { name: 'x', password: 'env-admin-password' } })).status, 403);
+
+  // 화면에서 새로 정하면 그 비밀번호를 쓰고, 환경 변수의 것은 더 이상 통하지 않는다
+  const set = await call(base, 'PUT', '/api/admin/teacher', { token, json: { mode: 'password', password: ROOM_PW } });
+  assert.deepEqual([set.data.teacher.mode, set.data.teacher.source], ['password', 'stored']);
+  assert.equal((await call(base, 'POST', '/api/rooms', { json: { name: 'x', password: 'env-room' } })).status, 403);
+  assert.equal((await call(base, 'POST', '/api/rooms', { json: { name: 'x', password: ROOM_PW } })).status, 201);
+  // 비밀번호 없이 허용하는 것도 화면에서 정한 대로
+  assert.equal((await call(base, 'PUT', '/api/admin/teacher', { token, json: { mode: 'open' } })).data.teacher.mode, 'open');
+  assert.equal((await call(base, 'GET', '/api/config')).data.requirePassword, false);
+  assert.equal((await call(base, 'POST', '/api/rooms', { json: { name: 'x' } })).status, 201);
+
+  // 처음 상태로 되돌리면 다시 환경 변수의 비밀번호를 쓴다 (관리자 비밀번호는 환경 변수 그대로)
+  assert.equal((await call(base, 'DELETE', '/api/admin', { token, json: { password: 'env-admin-password' } })).status, 200);
+  assert.equal((await call(base, 'GET', '/api/config')).data.requirePassword, true);
+  assert.equal((await call(base, 'POST', '/api/rooms', { json: { name: 'x' } })).status, 403);
+  assert.equal((await call(base, 'POST', '/api/rooms', { json: { name: 'x', password: 'env-room' } })).status, 201);
+  const back = (await call(base, 'POST', '/api/admin/login', { json: { password: 'env-admin-password' } })).data.token;
+  assert.deepEqual((await call(base, 'GET', '/api/admin/overview', { token: back })).data.teacher, { mode: 'password', source: 'env', at: null });
 });
 
 test('관리자: 이미 수업방 만들기 비밀번호가 있는 사이트에서는 그것을 아는 사람만 관리자가 될 수 있다', async (t) => {

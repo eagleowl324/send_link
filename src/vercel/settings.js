@@ -11,7 +11,9 @@
 // 비밀번호는 scrypt 해시로만 저장합니다. gen 은 관리자 비밀번호를 정할 때마다 새로 만들어지는 값으로,
 // 비밀번호가 바뀌면 이전에 로그인해 둔 화면이 모두 풀리게 합니다.
 //
-// 환경 변수 ADMIN_PASSWORD / TEACHER_PASSWORD 가 있으면 그것이 우선하고, 그 항목은 화면에서 바꿀 수 없습니다.
+// 환경 변수와의 관계:
+//   ADMIN_PASSWORD   있으면 그것이 관리자 비밀번호입니다. 화면에서 바꿀 수 없습니다. (비밀번호를 잊었을 때의 복구 수단)
+//   TEACHER_PASSWORD 화면에서 따로 정하기 전까지 쓰이는 값입니다. 화면에서 정하면 그쪽이 우선합니다.
 
 const crypto = require('node:crypto');
 const util = require('../util');
@@ -85,12 +87,12 @@ function createSettings({ kv, config, now = () => Date.now() }) {
       }
 
       let teacher = { mode: 'unset', source: null, at: 0, hash: '' };
-      if (config.teacherPassword) {
-        teacher = { mode: 'password', source: 'env', at: 0, hash: '' };
-      } else if (storedTeacher && storedTeacher.mode === 'open') {
+      if (storedTeacher && storedTeacher.mode === 'open') {
         teacher = { mode: 'open', source: 'stored', at: Number(storedTeacher.at) || 0, hash: '' };
       } else if (storedTeacher && storedTeacher.mode === 'password' && typeof storedTeacher.hash === 'string') {
         teacher = { mode: 'password', source: 'stored', at: Number(storedTeacher.at) || 0, hash: storedTeacher.hash };
+      } else if (config.teacherPassword) {
+        teacher = { mode: 'password', source: 'env', at: 0, hash: '' };
       }
 
       // 관리자가 없는데 누구나 만들 수 있는 상태로 두지 않습니다. (그 사이 아무나 관리자가 될 수 있으므로)
@@ -147,7 +149,7 @@ function createSettings({ kv, config, now = () => Date.now() }) {
       }
     },
 
-    // 화면에서 정한 것을 모두 지워 처음 설정 전 상태로 되돌립니다. (환경 변수로 정한 것은 그대로)
+    // 화면에서 정한 것을 모두 지워 처음 설정 전 상태로 되돌립니다. (환경 변수로 정한 것은 그대로 남아 다시 쓰입니다)
     async reset() {
       await kv.cmd('DEL', ADMIN_KEY, TEACHER_KEY);
     },

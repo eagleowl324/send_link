@@ -144,7 +144,6 @@ function createAdmin({ kv, rooms, settings, config, now, tools }) {
 
     if (rest === 'teacher') {
       if (method !== 'PUT') throw new HttpError(405, 'method_not_allowed');
-      if (state.teacher.source === 'env') throw new HttpError(409, 'fixed_by_env');
       const body = await readJson(req, 4096);
       if (body.mode === 'open') {
         return sendJson(res, 200, { teacher: describeTeacher(await settings.setTeacher('open')) });
